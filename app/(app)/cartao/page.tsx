@@ -2,10 +2,11 @@ import DashboardShell from "../../../components/dashboard/DashboardShell";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import type { CardStatus } from "@prisma/client";
 import CardStatusActionForm from "@/components/cards/CardStatusActionForm";
 import CardPreferenceToggleForm from "@/components/cards/CardPreferenceToggleForm";
 import ReissueCardForm from "@/components/cards/ReissueCardForm";
+
+type CardStatus = "ACTIVE" | "BLOCKED" | "CANCELED";
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
