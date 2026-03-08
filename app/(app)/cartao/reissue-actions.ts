@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 
 type ActionState = {
   success: boolean;
@@ -68,7 +69,7 @@ export async function reissueCardAction(
     };
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.card.update({
       where: { id: currentCard.id },
       data: {
