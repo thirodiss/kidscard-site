@@ -5,13 +5,13 @@
 ========================= */
 
 :root {
-  --bg: #F6F7FB;
+  --bg: #f6f7fb;
   --surface: #ffffff;
-  --text: #0F172A;
-  --muted: #5B6475;
+  --text: #0f172a;
+  --muted: #5b6475;
   --border: rgba(15, 23, 42, 0.08);
-  --primary: #4C2FFF;
-  --primary-hover: #3D26CC;
+  --primary: #4c2fff;
+  --primary-hover: #3d26cc;
 
   --radius-xl: 24px;
 }
@@ -44,11 +44,7 @@ body {
 .container-page {
   max-width: 1200px;
   margin: 0 auto;
-}
-
-section {
-  padding-top: 90px;
-  padding-bottom: 90px;
+  width: 100%;
 }
 
 /* =========================
@@ -97,6 +93,9 @@ section {
   border-radius: 9999px;
   padding: 12px 28px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary:hover {
@@ -110,6 +109,9 @@ section {
   border-radius: 9999px;
   padding: 12px 28px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-outline:hover {
@@ -123,7 +125,13 @@ section {
 
 a,
 button {
-  transition: all 180ms ease;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease,
+    opacity 180ms ease,
+    box-shadow 180ms ease;
 }
 
 button:active,
@@ -139,4 +147,18 @@ a:active {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: 8px;
+}
+
+input,
+select,
+textarea {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(15, 23, 42, 0.4);
 }

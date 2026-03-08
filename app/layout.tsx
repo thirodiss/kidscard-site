@@ -1,7 +1,6 @@
 import "./globals.css";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 import { Inter } from "next/font/google";
+import AuthSessionProvider from "../components/providers/SessionProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,18 +8,20 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Kids Card | Conta Digital para Pensão e Mesada",
+  title: "KidsCard | Conta Digital para Pensão e Mesada",
   description:
-    "Conta digital para receber pensão alimentícia e organizar a mesada, com planos de benefícios e extrato detalhado (conforme plano).",
+    "Conta digital para organizar pensão alimentícia e mesada com mais transparência, controle e planos progressivos para a família.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="pt-br">
-      <body className={inter.className}>
-        <Header />
-        {children}
-        <Footer />
+      <body className={`${inter.className} min-h-screen bg-white text-black`}>
+        <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>
   );
