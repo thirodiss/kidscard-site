@@ -33,7 +33,7 @@ node scripts/migrate-production.mjs && prisma generate && next build
 
 As migrações são versionadas em `prisma/migrations` e aplicadas antes do build de produção. O script reconhece com segurança o schema legado da KidsCard antes de registrar o baseline das três migrações originais. Previews sem banco usam apenas uma URL local fictícia para compilar e nunca executam migrações ou acessam o banco real.
 
-Na Vercel, a aplicação prioriza `KIDSCARD_CORE_URL`, fornecida pela nova integração Neon. `DATABASE_URL` permanece como alternativa para desenvolvimento local.
+Na Vercel, a aplicação prioriza `STORAGE_URL`, nome gerado pela conexão do banco `KIDSCARD_CORE`. `KIDSCARD_CORE_URL` e `DATABASE_URL` permanecem como alternativas para outras instalações e desenvolvimento local.
 
 ## Núcleo de pagamentos
 
