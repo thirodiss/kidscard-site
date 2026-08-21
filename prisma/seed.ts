@@ -3,11 +3,11 @@ import { PrismaClient, TransactionType } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import bcrypt from "bcryptjs"
 
-const connectionString = process.env.DATABASE_URL
+const connectionString = process.env.KIDSCARD_CORE_URL ?? process.env.DATABASE_URL
 const demoPassword = process.env.SEED_DEMO_PASSWORD ?? ""
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL não definida.")
+  throw new Error("KIDSCARD_CORE_URL ou DATABASE_URL não definida.")
 }
 
 if (!demoPassword || demoPassword.length < 12) {

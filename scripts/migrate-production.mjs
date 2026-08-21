@@ -3,6 +3,13 @@ import pg from "pg"
 
 const { Client } = pg
 const prismaCommand = process.platform === "win32" ? "prisma.cmd" : "prisma"
+const connectionString = process.env.KIDSCARD_CORE_URL ?? process.env.DATABASE_URL
+
+if (!connectionString) {
+  throw new Error("KIDSCARD_CORE_URL ou DATABASE_URL não definida.")
+}
+
+process.env.DATABASE_URL = connectionString
 
 const legacyMigrations = [
   "20260308134155_init",
@@ -39,9 +46,6 @@ function runPrisma(args) {
 }
 
 async function verifyLegacySchema() {
-  const connectionString = process.env.DATABASE_URL
-  if (!connectionString) throw new Error("DATABASE_URL não definida.")
-
   const client = new Client({ connectionString })
   await client.connect()
 
