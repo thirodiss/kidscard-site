@@ -31,7 +31,7 @@ Em produção, o comando `vercel-build` executa automaticamente:
 prisma migrate deploy && prisma generate && next build
 ```
 
-As migrações são versionadas em `prisma/migrations` e aplicadas antes do build da aplicação. Ambientes de preview não devem compartilhar o mesmo `DATABASE_URL` de produção.
+As migrações são versionadas em `prisma/migrations` e aplicadas antes do build de produção. Previews sem banco usam apenas uma URL local fictícia para compilar e nunca executam migrações ou acessam o banco real.
 
 ## Núcleo de pagamentos
 
