@@ -103,6 +103,12 @@ export default async function DependentesPage() {
       accountId: account.id,
     },
     orderBy: { createdAt: "desc" },
+    include: {
+      buckets: {
+        where: { type: { in: ["PENSION", "ALLOWANCE"] } },
+        select: { id: true, type: true, balanceCents: true },
+      },
+    },
   });
 
   const activeDependents = dependents.filter((item) => item.isActive);
@@ -113,16 +119,22 @@ export default async function DependentesPage() {
     },
     include: {
       dependent: true,
+      destinationBucket: { select: { type: true, name: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 
   const recentTransfers = allTransfers.slice(0, 5);
 
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
   const transfersByDependent = await prisma.transfer.groupBy({
     by: ["dependentId"],
     where: {
       fromAccountId: account.id,
+      createdAt: { gte: monthStart },
     },
     _sum: {
       amountCents: true,
@@ -159,6 +171,12 @@ export default async function DependentesPage() {
 
   const enrichedDependents = dependents.map((dependent) => {
     const receivedCents = totalsMap.get(dependent.id) ?? 0;
+    const pensionCents =
+      dependent.buckets.find((bucket) => bucket.type === "PENSION")
+        ?.balanceCents ?? 0;
+    const allowanceCents =
+      dependent.buckets.find((bucket) => bucket.type === "ALLOWANCE")
+        ?.balanceCents ?? 0;
     const remainingLimitCents = Math.max(
       dependent.monthlyLimitCents - receivedCents,
       0
@@ -167,6 +185,8 @@ export default async function DependentesPage() {
     return {
       ...dependent,
       receivedCents,
+      pensionCents,
+      allowanceCents,
       remainingLimitCents,
       transferHistory: transferHistoryMap.get(dependent.id) ?? [],
     };
@@ -204,9 +224,9 @@ export default async function DependentesPage() {
           note="Soma dos limites mensais definidos para os dependentes ativos."
         />
         <SummaryCard
-          label="Total enviado"
+          label="Enviado no mês"
           value={formatCurrency(totalSentToDependents)}
-          note="Valor total já transferido para dependentes."
+          note="Valor transferido para Pensão e Mesada no mês atual."
         />
       </div>
 
@@ -295,33 +315,42 @@ export default async function DependentesPage() {
                           </span>
                         </div>
 
-                        <div className="mt-5 grid gap-4 md:grid-cols-3">
+                        <div className="mt-5 grid gap-4 md:grid-cols-4">
                           <div className="rounded-2xl border border-black/10 bg-white p-4">
                             <div className="text-xs font-semibold uppercase tracking-wide text-black/45">
-                              Recebido
+                              Carteira Pensão
                             </div>
                             <div className="mt-2 text-xl font-bold text-[#0f172a]">
-                              {formatCurrency(dependent.receivedCents)}
+                              {formatCurrency(dependent.pensionCents)}
                             </div>
                           </div>
 
                           <div className="rounded-2xl border border-black/10 bg-white p-4">
                             <div className="text-xs font-semibold uppercase tracking-wide text-black/45">
-                              Saldo restante
+                              Carteira Mesada
+                            </div>
+                            <div className="mt-2 text-xl font-bold text-[#0f172a]">
+                              {formatCurrency(dependent.allowanceCents)}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-black/10 bg-white p-4">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-black/45">
+                              Saldo do dependente
+                            </div>
+                            <div className="mt-2 text-xl font-bold text-[#0f172a]">
+                              {formatCurrency(
+                                dependent.pensionCents + dependent.allowanceCents
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-black/10 bg-white p-4">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-black/45">
+                              Limite disponível
                             </div>
                             <div className="mt-2 text-xl font-bold text-[#0f172a]">
                               {formatCurrency(dependent.remainingLimitCents)}
-                            </div>
-                          </div>
-
-                          <div className="rounded-2xl border border-black/10 bg-white p-4">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-black/45">
-                              Uso do limite
-                            </div>
-                            <div className="mt-2 text-xl font-bold text-[#0f172a]">
-                              {dependent.monthlyLimitCents > 0
-                                ? `${progress.toFixed(0)}%`
-                                : "0%"}
                             </div>
                           </div>
                         </div>
@@ -332,7 +361,7 @@ export default async function DependentesPage() {
                               Progresso do limite
                             </span>
                             <span className="text-black/60">
-                              {formatCurrency(dependent.receivedCents)} de{" "}
+                              {formatCurrency(dependent.receivedCents)} neste mês de{" "}
                               {formatCurrency(dependent.monthlyLimitCents)}
                             </span>
                           </div>
@@ -434,6 +463,11 @@ export default async function DependentesPage() {
                     </div>
                     <div className="mt-2 text-lg font-bold text-[#0f172a]">
                       {formatCurrency(transfer.amountCents)}
+                    </div>
+                    <div className="mt-1 text-xs font-semibold uppercase tracking-wide text-[#5b2cff]">
+                      {transfer.destinationBucket?.type === "PENSION"
+                        ? "Carteira Pensão"
+                        : "Carteira Mesada"}
                     </div>
                     {transfer.note ? (
                       <p className="mt-2 text-sm text-black/60">{transfer.note}</p>

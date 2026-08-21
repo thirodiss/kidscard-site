@@ -23,9 +23,11 @@ export default function AppSidebar() {
     const storedAgency = window.localStorage.getItem("kidscard-user-agency");
     const storedAccount = window.localStorage.getItem("kidscard-user-account");
 
-    if (storedPlan) setPlan(storedPlan);
-    if (storedAgency) setAgency(storedAgency);
-    if (storedAccount) setAccount(storedAccount);
+    queueMicrotask(() => {
+      if (storedPlan) setPlan(storedPlan);
+      if (storedAgency) setAgency(storedAgency);
+      if (storedAccount) setAccount(storedAccount);
+    });
   }, []);
 
   return (

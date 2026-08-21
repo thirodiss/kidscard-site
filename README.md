@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KidsCard
 
-## Getting Started
+Plataforma para conta familiar, Cartão Pensão, Cartão Mesada e extrato detalhado por item.
 
-First, run the development server:
+## Estado atual
+
+O projeto funciona em modo `SANDBOX`. O painel, o banco interno e as regras da KidsCard são funcionais no ambiente de demonstração, mas nenhum saldo, cartão ou transferência representa dinheiro real até a conexão com uma instituição autorizada.
+
+O núcleo foi preparado para receber adaptadores de emissores sem acoplar a regra de negócio a uma única empresa.
+
+## Stack
+
+- Next.js 16 e React 19
+- NextAuth
+- PostgreSQL e Prisma
+- Tailwind CSS
+
+## Desenvolvimento
+
+1. Copie `.env.example` para `.env` e preencha as variáveis.
+2. Instale as dependências com `npm ci`.
+3. Execute `npm run db:migrate`.
+4. Defina `SEED_DEMO_PASSWORD` com pelo menos 12 caracteres e execute `npm run seed` para criar a conta de demonstração.
+5. Inicie com `npm run dev`.
+
+## Banco de dados em produção
+
+Em produção, o comando `vercel-build` executa automaticamente:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+prisma migrate deploy && prisma generate && next build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+As migrações são versionadas em `prisma/migrations` e aplicadas antes do build da aplicação. Ambientes de preview não devem compartilhar o mesmo `DATABASE_URL` de produção.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Núcleo de pagamentos
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `lib/payments/contracts.ts`: contrato comum para qualquer emissor.
+- `lib/payments/sandbox-provider.ts`: adaptador seguro de demonstração.
+- `lib/payments/process-event.ts`: processamento idempotente de compras e estornos.
+- `app/api/payments/webhooks/[provider]/route.ts`: entrada assinada de eventos.
 
-## Learn More
+O extrato detalhado não usa mais uma lista fixa no componente. Produtos, quantidades, preços, origem e confiança ficam persistidos em `TransactionItem`. Comprovantes e NFC-e são representados por `Receipt`.
 
-To learn more about Next.js, take a look at the following resources:
+## Carteiras e livro contábil
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Cada conta possui saldo principal e uma carteira técnica de liquidação.
+- Cada dependente recebe carteiras separadas de `PENSION` e `ALLOWANCE`.
+- Transferências internas geram um `LedgerJournal` com duas `LedgerEntry` de mesmo valor.
+- Débito reduz a carteira de origem e crédito aumenta a carteira de destino.
+- Compras e estornos recebidos por webhook usam o mesmo livro contábil.
+- `WalletAccount.balanceCents` representa o saldo total sob custódia; a disponibilidade de cada finalidade fica em `WalletBucket.balanceCents`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Pré-adesão e comprovantes
 
-## Deploy on Vercel
+O formulário `/cadastro` apenas registra uma `OnboardingApplication` com consentimentos versionados e status `KYC_PENDING`. Ele não abre conta nem coleta CPF/documento. A identidade deverá ser validada no parceiro de KYC homologado.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+No extrato, compras sem itens podem receber chave de NFC-e e itens digitados no sandbox. O total é conciliado com a compra; divergências ficam em `REVIEW_REQUIRED`. Leitura automática de imagem exige armazenamento privado e um parser/OCR homologado.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Segurança
+
+- Webhooks exigem assinatura HMAC.
+- Eventos externos são idempotentes.
+- CPF não é incluído no JWT ou na sessão do navegador.
+- Provedores não configurados falham de forma fechada.
+- Credenciais e segredos nunca devem ser enviados ao GitHub.
+
+Para operação financeira real ainda são necessários contrato, homologação, credenciais do emissor, KYC/PLD, conciliação, antifraude e os procedimentos regulatórios aplicáveis.

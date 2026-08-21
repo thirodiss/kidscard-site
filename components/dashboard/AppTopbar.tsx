@@ -35,8 +35,8 @@ export default function AppTopbar() {
   const [open, setOpen] = useState(false);
 
   const name = session?.user?.name || "Responsável KidsCard";
-  const agency = (session?.user as any)?.agency || "0001";
-  const account = (session?.user as any)?.accountNumber || "123456";
+  const agency = session?.user?.agency || "0001";
+  const account = session?.user?.accountNumber || "123456";
   const plan = "Standard";
 
   const initials = useMemo(() => {
@@ -126,8 +126,8 @@ export default function AppTopbar() {
             })}
           </div>
 
-          <div className="rounded-full border border-black/10 bg-black/[0.02] px-4 py-2 text-sm font-semibold text-black/60">
-            Ambiente seguro
+          <div className="rounded-full border border-amber-500/25 bg-amber-500/[0.08] px-4 py-2 text-sm font-semibold text-amber-900">
+            Sandbox • sem movimentação real
           </div>
         </div>
       </div>
@@ -141,6 +141,9 @@ export default function AppTopbar() {
                 Ag. {agency} • Conta {account}
               </div>
               <div className="mt-1 text-sm text-black/60">Plano {plan}</div>
+              <div className="mt-3 rounded-full border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-xs font-semibold text-amber-900">
+                Sandbox • sem movimentação real
+              </div>
             </div>
 
             {items.map((item) => (

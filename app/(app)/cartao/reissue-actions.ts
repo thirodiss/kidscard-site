@@ -4,15 +4,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
+import { getPaymentProvider } from "@/lib/payments";
+import type { ProviderCardResult } from "@/lib/payments/contracts";
 
 type ActionState = {
   success: boolean;
   message: string;
 };
-
-function generateLast4() {
-  return String(Math.floor(1000 + Math.random() * 9000));
-}
 
 export async function reissueCardAction(
   _prevState: ActionState,
@@ -69,22 +67,56 @@ export async function reissueCardAction(
     };
   }
 
+  await prisma.card.update({
+    where: { id: currentCard.id },
+    data: { syncStatus: "PENDING" },
+  });
+
+  let providerResult: ProviderCardResult;
+
+  try {
+    const gateway = getPaymentProvider(currentCard.provider);
+    providerResult = await gateway.reissueCard({
+      internalId: currentCard.id,
+      externalId: currentCard.externalId,
+    });
+  } catch (error) {
+    console.error("Falha ao solicitar segunda via ao emissor", error);
+    await prisma.card.update({
+      where: { id: currentCard.id },
+      data: { syncStatus: "FAILED" },
+    });
+
+    return {
+      success: false,
+      message:
+        "O emissor não confirmou a segunda via. O cartão atual não foi cancelado.",
+    };
+  }
+
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.card.update({
       where: { id: currentCard.id },
       data: {
         status: "CANCELED",
+        syncStatus: "SYNCED",
+        providerUpdatedAt: providerResult.providerUpdatedAt,
       },
     });
 
     await tx.card.create({
       data: {
         accountId: currentCard.accountId,
+        spendingBucketId: currentCard.spendingBucketId,
         holderName: currentCard.holderName,
         brand: currentCard.brand,
         color: currentCard.color,
-        last4: generateLast4(),
+        last4: providerResult.last4 || currentCard.last4,
         status: "ACTIVE",
+        provider: currentCard.provider,
+        externalId: providerResult.externalId,
+        syncStatus: "SYNCED",
+        providerUpdatedAt: providerResult.providerUpdatedAt,
         allowPhysicalPurchase: currentCard.allowPhysicalPurchase,
         allowOnlinePurchase: currentCard.allowOnlinePurchase,
         allowContactless: currentCard.allowContactless,

@@ -61,31 +61,28 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           email: user.email ?? undefined,
           role: user.role,
-          cpf: user.cpf,
           agency: user.agency,
           accountNumber: user.accountNumber,
-        } as any;
+        };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = (user as any).id;
-        token.role = (user as any).role;
-        token.cpf = (user as any).cpf;
-        token.agency = (user as any).agency;
-        token.accountNumber = (user as any).accountNumber;
+        token.id = user.id;
+        token.role = user.role;
+        token.agency = user.agency;
+        token.accountNumber = user.accountNumber;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
-        (session.user as any).cpf = token.cpf;
-        (session.user as any).agency = token.agency;
-        (session.user as any).accountNumber = token.accountNumber;
+        session.user.id = token.id || "";
+        session.user.role = token.role || "";
+        session.user.agency = token.agency || "";
+        session.user.accountNumber = token.accountNumber || "";
       }
       return session;
     },

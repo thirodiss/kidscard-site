@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ReceiptIntakeForm from "@/components/extrato/ReceiptIntakeForm";
 
 type TransactionType =
   | "DEPOSIT"
@@ -12,8 +13,19 @@ type TransactionType =
   | "ADJUSTMENT";
 
 type TransactionItemDetail = {
+  id: string;
   name: string;
-  amountCents: number;
+  ean: string | null;
+  quantity: string;
+  unitPriceCents: number;
+  totalAmountCents: number;
+  source:
+    | "MERCHANT_INTEGRATION"
+    | "FISCAL_RECEIPT"
+    | "AI_ASSISTED"
+    | "MANUAL_REVIEW"
+    | "SANDBOX";
+  confidenceBasisPoints: number | null;
 };
 
 type ExtratoTransaction = {
@@ -24,7 +36,29 @@ type ExtratoTransaction = {
   type: TransactionType;
   category: string | null;
   merchant: string | null;
+  detailStatus:
+    | "UNAVAILABLE"
+    | "PENDING"
+    | "AVAILABLE"
+    | "REVIEW_REQUIRED"
+    | "FAILED";
+  items: TransactionItemDetail[];
 };
+
+function getDetailSourceLabel(source: TransactionItemDetail["source"]) {
+  switch (source) {
+    case "MERCHANT_INTEGRATION":
+      return "Integração do estabelecimento";
+    case "FISCAL_RECEIPT":
+      return "Cupom fiscal";
+    case "AI_ASSISTED":
+      return "Leitura assistida por IA";
+    case "MANUAL_REVIEW":
+      return "Conferência humana";
+    case "SANDBOX":
+      return "Demonstração";
+  }
+}
 
 function formatCurrency(cents: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -99,13 +133,11 @@ export default function ExtratoInteractive({
   totalEntries,
   totalPurchases,
   totalTransfersToDependents,
-  transactionItemDetails,
 }: {
   transactions: ExtratoTransaction[];
   totalEntries: number;
   totalPurchases: number;
   totalTransfersToDependents: number;
-  transactionItemDetails: Record<string, TransactionItemDetail[]>;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(
     transactions[0]?.id ?? null
@@ -116,9 +148,7 @@ export default function ExtratoInteractive({
     [selectedId, transactions]
   );
 
-  const selectedItems = selectedTransaction
-    ? transactionItemDetails[selectedTransaction.description] || null
-    : null;
+  const selectedItems = selectedTransaction?.items || [];
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
@@ -250,25 +280,51 @@ export default function ExtratoInteractive({
                 </div>
               </div>
 
-              {selectedItems ? (
+              {selectedItems.length > 0 ? (
                 <div className="mt-5 rounded-2xl border border-black/10 bg-white p-4">
                   <div className="text-sm font-semibold text-[#5b2cff]">
                     Detalhamento da compra
                   </div>
 
                   <div className="mt-4 space-y-3">
-                    {selectedItems.map((item, index) => (
+                    {selectedItems.map((item) => (
                       <div
-                        key={`${item.name}-${index}`}
-                        className="flex items-center justify-between text-sm"
+                        key={item.id}
+                        className="rounded-xl border border-black/5 bg-black/[0.015] px-3 py-3 text-sm"
                       >
-                        <span className="text-black/60">{item.name}</span>
-                        <span className="font-semibold text-[#0f172a]">
-                          {formatCurrency(item.amountCents)}
-                        </span>
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <div className="font-semibold text-[#0f172a]">
+                              {item.name}
+                            </div>
+                            <div className="mt-1 text-xs text-black/50">
+                              Qtd. {item.quantity} • {getDetailSourceLabel(item.source)}
+                              {item.ean ? ` • EAN ${item.ean}` : ""}
+                            </div>
+                          </div>
+                          <span className="font-semibold text-[#0f172a]">
+                            {formatCurrency(item.totalAmountCents)}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
+                </div>
+              ) : selectedTransaction.type === "PURCHASE" ? (
+                <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/[0.06] p-4 text-sm leading-6 text-amber-900">
+                  <div>
+                    {selectedTransaction.detailStatus === "PENDING"
+                      ? "Compra recebida. Aguardando cupom fiscal ou integração do estabelecimento para liberar os itens."
+                      : selectedTransaction.detailStatus === "REVIEW_REQUIRED"
+                      ? "Os itens foram recebidos, mas precisam de conferência antes de serem exibidos."
+                      : selectedTransaction.detailStatus === "FAILED"
+                      ? "Não foi possível processar o detalhamento desta compra."
+                      : "Esta compra ainda não possui detalhamento por item disponível."}
+                  </div>
+                  <ReceiptIntakeForm
+                    key={selectedTransaction.id}
+                    transactionId={selectedTransaction.id}
+                  />
                 </div>
               ) : null}
 

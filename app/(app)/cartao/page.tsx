@@ -2,6 +2,7 @@ import DashboardShell from "../../../components/dashboard/DashboardShell";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
+import AssignCardWalletForm from "@/components/cards/AssignCardWalletForm";
 import CardStatusActionForm from "@/components/cards/CardStatusActionForm";
 import CardPreferenceToggleForm from "@/components/cards/CardPreferenceToggleForm";
 import ReissueCardForm from "@/components/cards/ReissueCardForm";
@@ -95,6 +96,10 @@ export default async function CartaoPage() {
   const account = await prisma.walletAccount.findFirst({
     where: { userId: session.user.id },
     include: {
+      buckets: {
+        where: { type: { in: ["PRIMARY", "PENSION", "ALLOWANCE"] } },
+        include: { dependent: { select: { name: true } } },
+      },
       cards: {
         orderBy: { createdAt: "desc" },
         take: 2,
@@ -117,6 +122,23 @@ export default async function CartaoPage() {
 
   const card = account.cards[0] ?? null;
   const previousCard = account.cards[1] ?? null;
+  const cardBalanceCents =
+    account.buckets.find((bucket) => bucket.id === card?.spendingBucketId)
+      ?.balanceCents ??
+    account.buckets.find(
+      (bucket) => bucket.type === "PRIMARY" && bucket.dependentId === null
+    )?.balanceCents ??
+    account.balanceCents;
+  const walletOptions = account.buckets.map((bucket) => ({
+    id: bucket.id,
+    label:
+      bucket.type === "PRIMARY"
+        ? "Saldo principal"
+        : `${bucket.dependent?.name || "Dependente"} — ${
+            bucket.type === "PENSION" ? "Pensão" : "Mesada"
+          }`,
+    balanceLabel: formatCurrency(bucket.balanceCents),
+  }));
 
   const holderName = session.user.name || "Responsável KidsCard";
   const agency = session.user.agency || "0001";
@@ -224,11 +246,18 @@ export default async function CartaoPage() {
           <div className="rounded-3xl border border-black/10 bg-white p-6 soft-shadow">
             <div className="text-sm font-semibold text-[#5b2cff]">Saldo vinculado</div>
             <div className="mt-2 text-3xl font-bold tracking-tight text-[#0f172a]">
-              {formatCurrency(account.balanceCents)}
+              {formatCurrency(cardBalanceCents)}
             </div>
             <p className="mt-3 leading-7 text-black/65">
               Valor disponível atualmente para uso no cartão da conta.
             </p>
+            {card ? (
+              <AssignCardWalletForm
+                cardId={card.id}
+                currentBucketId={card.spendingBucketId}
+                options={walletOptions}
+              />
+            ) : null}
           </div>
 
           {previousCard ? (

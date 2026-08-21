@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getPaymentProvider } from "@/lib/payments";
 
 type ActionState = {
   success: boolean;
@@ -71,6 +72,12 @@ export async function updateCardPreferenceAction(
     select: {
       id: true,
       status: true,
+      provider: true,
+      externalId: true,
+      allowPhysicalPurchase: true,
+      allowOnlinePurchase: true,
+      allowContactless: true,
+      allowNotifications: true,
     },
   });
 
@@ -88,12 +95,48 @@ export async function updateCardPreferenceAction(
     };
   }
 
+  const preferences = {
+    allowPhysicalPurchase: card.allowPhysicalPurchase,
+    allowOnlinePurchase: card.allowOnlinePurchase,
+    allowContactless: card.allowContactless,
+    allowNotifications: card.allowNotifications,
+    [field]: value,
+  };
+
   await prisma.card.update({
     where: { id: card.id },
-    data: {
-      [field]: value,
-    },
+    data: { syncStatus: "PENDING" },
   });
+
+  try {
+    const gateway = getPaymentProvider(card.provider);
+    const providerResult = await gateway.setCardPreferences(
+      { internalId: card.id, externalId: card.externalId },
+      preferences
+    );
+
+    await prisma.card.update({
+      where: { id: card.id },
+      data: {
+        ...preferences,
+        externalId: providerResult.externalId,
+        syncStatus: "SYNCED",
+        providerUpdatedAt: providerResult.providerUpdatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Falha ao sincronizar preferências do cartão", error);
+    await prisma.card.update({
+      where: { id: card.id },
+      data: { syncStatus: "FAILED" },
+    });
+
+    return {
+      success: false,
+      message:
+        "Não foi possível sincronizar a preferência com o emissor. Tente novamente mais tarde.",
+    };
+  }
 
   revalidatePath("/cartao");
 

@@ -105,6 +105,12 @@ export async function createDependentAction(
       birthDate,
       monthlyLimitCents,
       isActive: true,
+      buckets: {
+        create: [
+          { accountId: account.id, type: "PENSION", name: "Pensão" },
+          { accountId: account.id, type: "ALLOWANCE", name: "Mesada" },
+        ],
+      },
     },
   });
 
