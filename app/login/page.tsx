@@ -201,6 +201,13 @@ export default function LoginPage() {
                 </button>
               </form>
 
+              <Link
+                href="/recuperar-senha"
+                className="mt-4 block text-center text-sm font-semibold text-[#5b2cff]"
+              >
+                Esqueci minha senha
+              </Link>
+
               <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-slate-600">
                 <p className="font-semibold text-slate-800">Ainda não possui conta?</p>
                 <p className="mt-1 leading-6">

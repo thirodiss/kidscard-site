@@ -38,6 +38,9 @@ export default function AppTopbar() {
   const agency = session?.user?.agency || "0001";
   const account = session?.user?.accountNumber || "123456";
   const plan = "Standard";
+  const navigationItems = session?.user?.role === "ADMIN"
+    ? [...items, { href: "/admin/cadastros", label: "Admin" }]
+    : items;
 
   const initials = useMemo(() => {
     return name
@@ -107,7 +110,7 @@ export default function AppTopbar() {
 
         <div className="mt-4 hidden items-center justify-between gap-4 lg:flex">
           <div className="flex flex-wrap gap-2">
-            {items.map((item) => {
+            {navigationItems.map((item) => {
               const active = pathname === item.href;
 
               return (
@@ -146,7 +149,7 @@ export default function AppTopbar() {
               </div>
             </div>
 
-            {items.map((item) => (
+            {navigationItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
