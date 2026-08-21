@@ -2,10 +2,15 @@ import "dotenv/config"
 import { defineConfig } from "prisma/config"
 
 const connectionString =
-  process.env.STORAGE_URL ?? process.env.KIDSCARD_CORE_URL ?? process.env.DATABASE_URL
+  process.env.KIDSCARD_CORE_DATABASE_URL ??
+  process.env.STORAGE_URL ??
+  process.env.KIDSCARD_CORE_URL ??
+  process.env.DATABASE_URL
 
 if (!connectionString) {
-  throw new Error("STORAGE_URL, KIDSCARD_CORE_URL ou DATABASE_URL não definida.")
+  throw new Error(
+    "KIDSCARD_CORE_DATABASE_URL, STORAGE_URL, KIDSCARD_CORE_URL ou DATABASE_URL não definida.",
+  )
 }
 
 export default defineConfig({
