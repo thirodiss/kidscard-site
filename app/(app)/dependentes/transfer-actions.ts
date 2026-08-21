@@ -3,6 +3,8 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { postInternalTransfer } from "@/lib/ledger";
+import { randomUUID } from "node:crypto";
 
 type ActionState = {
   success: boolean;
@@ -26,8 +28,12 @@ export async function createTransferToDependentAction(
     where: { userId: session.user.id },
     select: {
       id: true,
-      balanceCents: true,
       status: true,
+      buckets: {
+        where: { type: "PRIMARY", dependentId: null },
+        select: { id: true, balanceCents: true },
+        take: 1,
+      },
     },
   });
 
@@ -48,6 +54,7 @@ export async function createTransferToDependentAction(
   const dependentId = String(formData.get("dependentId") || "").trim();
   const amountRaw = String(formData.get("amount") || "").trim();
   const note = String(formData.get("note") || "").trim();
+  const walletType = String(formData.get("walletType") || "ALLOWANCE");
 
   if (!dependentId) {
     return {
@@ -68,6 +75,10 @@ export async function createTransferToDependentAction(
 
   const amountCents = Math.round(amountNumber * 100);
 
+  if (walletType !== "PENSION" && walletType !== "ALLOWANCE") {
+    return { success: false, message: "Selecione Pensão ou Mesada." };
+  }
+
   const dependent = await prisma.dependent.findFirst({
     where: {
       id: dependentId,
@@ -79,6 +90,11 @@ export async function createTransferToDependentAction(
       id: true,
       name: true,
       monthlyLimitCents: true,
+      buckets: {
+        where: { type: walletType },
+        select: { id: true },
+        take: 1,
+      },
     },
   });
 
@@ -89,29 +105,58 @@ export async function createTransferToDependentAction(
     };
   }
 
-  if (amountCents > account.balanceCents) {
+  const sourceBucket = account.buckets[0];
+  const destinationBucket = dependent.buckets[0];
+
+  if (!sourceBucket || !destinationBucket) {
     return {
       success: false,
-      message: "Saldo insuficiente para realizar a transferência.",
+      message: "As carteiras ainda não foram preparadas. Execute a migração do banco.",
     };
   }
 
+  if (amountCents > sourceBucket.balanceCents) {
+    return { success: false, message: "Saldo principal insuficiente." };
+  }
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const sentThisMonth = await prisma.transfer.aggregate({
+    where: { dependentId: dependent.id, createdAt: { gte: monthStart } },
+    _sum: { amountCents: true },
+  });
+
+  if (
+    dependent.monthlyLimitCents > 0 &&
+    (sentThisMonth._sum.amountCents ?? 0) + amountCents >
+      dependent.monthlyLimitCents
+  ) {
+    return { success: false, message: "A transferência ultrapassa o limite mensal." };
+  }
+
   await prisma.$transaction(async (tx) => {
+    const journal = await postInternalTransfer(tx, {
+      accountId: account.id,
+      sourceBucketId: sourceBucket.id,
+      destinationBucketId: destinationBucket.id,
+      amountCents,
+      idempotencyKey: `dependent-transfer:${randomUUID()}`,
+      description: `Transferência para ${dependent.name} — ${
+        walletType === "PENSION" ? "Pensão" : "Mesada"
+      }`,
+    });
+
     await tx.transfer.create({
       data: {
         fromAccountId: account.id,
         dependentId: dependent.id,
+        sourceBucketId: sourceBucket.id,
+        destinationBucketId: destinationBucket.id,
+        journalId: journal.id,
         amountCents,
-        note: note || null,
-      },
-    });
-
-    await tx.walletAccount.update({
-      where: { id: account.id },
-      data: {
-        balanceCents: {
-          decrement: amountCents,
-        },
+        note:
+          note || (walletType === "PENSION" ? "Pensão" : "Mesada"),
       },
     });
 

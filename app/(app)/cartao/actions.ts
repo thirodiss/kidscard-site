@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getPaymentProvider } from "@/lib/payments";
 
 type ActionState = {
   success: boolean;
@@ -61,6 +62,8 @@ export async function updateCardStatusAction(
       status: true,
       holderName: true,
       last4: true,
+      provider: true,
+      externalId: true,
     },
   });
 
@@ -87,10 +90,38 @@ export async function updateCardStatusAction(
 
   await prisma.card.update({
     where: { id: card.id },
-    data: {
-      status: nextStatus,
-    },
+    data: { syncStatus: "PENDING" },
   });
+
+  try {
+    const gateway = getPaymentProvider(card.provider);
+    const providerResult = await gateway.setCardStatus(
+      { internalId: card.id, externalId: card.externalId },
+      nextStatus
+    );
+
+    await prisma.card.update({
+      where: { id: card.id },
+      data: {
+        status: nextStatus,
+        externalId: providerResult.externalId,
+        syncStatus: "SYNCED",
+        providerUpdatedAt: providerResult.providerUpdatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Falha ao sincronizar status do cartão", error);
+    await prisma.card.update({
+      where: { id: card.id },
+      data: { syncStatus: "FAILED" },
+    });
+
+    return {
+      success: false,
+      message:
+        "Não foi possível sincronizar o cartão com o emissor. Nenhuma alteração financeira foi confirmada.",
+    };
+  }
 
   revalidatePath("/cartao");
   revalidatePath("/painel");

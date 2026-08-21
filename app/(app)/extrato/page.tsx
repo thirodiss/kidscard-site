@@ -13,32 +13,6 @@ function formatCurrency(cents: number) {
   }).format(cents / 100);
 }
 
-const transactionItemDetails: Record<
-  string,
-  { name: string; amountCents: number }[]
-> = {
-  "Lanche escolar": [
-    { name: "Coxinha", amountCents: 1850 },
-    { name: "Suco de laranja", amountCents: 1260 },
-    { name: "Esfiha", amountCents: 1000 },
-  ],
-  "Compra no mercado": [
-    { name: "Arroz 5kg", amountCents: 2490 },
-    { name: "Leite integral (2)", amountCents: 1500 },
-    { name: "Sabonete", amountCents: 800 },
-    { name: "Frutas", amountCents: 8200 },
-  ],
-  "Compra no supermercado": [
-    { name: "Macarrão", amountCents: 1290 },
-    { name: "Molho de tomate", amountCents: 690 },
-    { name: "Refrigerante", amountCents: 850 },
-  ],
-  Padaria: [
-    { name: "Pão francês", amountCents: 900 },
-    { name: "Café", amountCents: 650 },
-  ],
-};
-
 function SummaryCard({
   label,
   value,
@@ -99,6 +73,11 @@ export default async function ExtratoPage({
     select: {
       id: true,
       balanceCents: true,
+      buckets: {
+        where: { type: "PRIMARY", dependentId: null },
+        select: { balanceCents: true },
+        take: 1,
+      },
     },
   });
 
@@ -122,6 +101,11 @@ export default async function ExtratoPage({
     },
     orderBy: { occurredAt: "desc" },
     take,
+    include: {
+      items: {
+        orderBy: { createdAt: "asc" },
+      },
+    },
   });
 
   const allTransactions = await prisma.transaction.findMany({
@@ -135,7 +119,7 @@ export default async function ExtratoPage({
     .reduce((sum, tx) => sum + tx.amountCents, 0);
 
   const totalDebits = allTransactions
-    .filter((tx) => tx.amountCents < 0)
+    .filter((tx) => tx.amountCents < 0 && tx.type !== "TRANSFER_OUT")
     .reduce((sum, tx) => sum + Math.abs(tx.amountCents), 0);
 
   const totalTransfersToDependents = allTransactions
@@ -154,6 +138,17 @@ export default async function ExtratoPage({
     type: item.type as TransactionType,
     category: item.category,
     merchant: item.merchant,
+    detailStatus: item.detailStatus,
+    items: item.items.map((detail) => ({
+      id: detail.id,
+      name: detail.name,
+      ean: detail.ean,
+      quantity: detail.quantity.toString(),
+      unitPriceCents: detail.unitPriceCents,
+      totalAmountCents: detail.totalAmountCents,
+      source: detail.source,
+      confidenceBasisPoints: detail.confidenceBasisPoints,
+    })),
   }));
 
   return (
@@ -179,8 +174,8 @@ export default async function ExtratoPage({
         />
         <SummaryCard
           label="Saldo atual"
-          value={formatCurrency(account.balanceCents)}
-          note="Valor atualmente disponível na conta principal."
+          value={formatCurrency(account.buckets[0]?.balanceCents ?? account.balanceCents)}
+          note="Valor disponível na carteira principal, fora de Pensão e Mesada."
         />
       </div>
 
@@ -245,7 +240,6 @@ export default async function ExtratoPage({
         totalEntries={totalEntries}
         totalPurchases={totalPurchases}
         totalTransfersToDependents={totalTransfersToDependents}
-        transactionItemDetails={transactionItemDetails}
       />
     </DashboardShell>
   );

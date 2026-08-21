@@ -34,7 +34,7 @@ export default function EditDependentLimitForm({
 
   useEffect(() => {
     if (state.success) {
-      setOpen(false);
+      queueMicrotask(() => setOpen(false));
     }
   }, [state.success]);
 

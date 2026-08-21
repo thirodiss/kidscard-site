@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { createTransferToDependentAction } from "@/app/(app)/dependentes/transfer-actions";
 
 type DependentOption = {
@@ -32,15 +32,7 @@ export default function TransferToDependentForm({
   const [dependentId, setDependentId] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-
-  useEffect(() => {
-    if (state.success) {
-      setDependentId("");
-      setAmount("");
-      setNote("");
-      setOpen(false);
-    }
-  }, [state]);
+  const [walletType, setWalletType] = useState("ALLOWANCE");
 
   return (
     <div>
@@ -80,6 +72,24 @@ export default function TransferToDependentForm({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-black/65">
+                Carteira de destino
+              </label>
+              <select
+                name="walletType"
+                value={walletType}
+                onChange={(e) => setWalletType(e.target.value)}
+                className="w-full rounded-2xl border border-black/10 bg-black/[0.02] px-4 py-3 outline-none transition focus:border-[#5b2cff]"
+              >
+                <option value="ALLOWANCE">Mesada</option>
+                <option value="PENSION">Pensão</option>
+              </select>
+              <p className="mt-2 text-xs leading-5 text-black/50">
+                Os saldos ficam separados e rastreáveis no extrato familiar.
+              </p>
             </div>
 
             <div>

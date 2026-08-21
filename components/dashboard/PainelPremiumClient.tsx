@@ -285,7 +285,7 @@ export default function PainelPremiumClient({
                   }
                 />
                 <Tooltip
-                  formatter={(value: number) => formatCurrency(value)}
+                  formatter={(value) => formatCurrency(Number(value ?? 0))}
                   labelStyle={{ color: "#0f172a" }}
                 />
                 <Bar dataKey="entradas" radius={[10, 10, 0, 0]} />
@@ -328,7 +328,9 @@ export default function PainelPremiumClient({
                       />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value ?? 0))}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -398,7 +400,9 @@ export default function PainelPremiumClient({
                     }).format(value / 100)
                   }
                 />
-                <Tooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                <Tooltip
+                  formatter={(value) => formatCurrency(Number(value ?? 0))}
+                />
                 <Area
                   type="monotone"
                   dataKey="total"

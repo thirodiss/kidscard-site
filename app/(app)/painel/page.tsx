@@ -39,6 +39,7 @@ type WalletAccountWithRelations = Prisma.WalletAccountGetPayload<{
     cards: true;
     transactions: true;
     dependents: true;
+    buckets: true;
   };
 }>;
 
@@ -65,6 +66,7 @@ export default async function PainelPage() {
           take: 12,
         },
         dependents: true,
+        buckets: true,
       },
     });
 
@@ -78,19 +80,12 @@ export default async function PainelPage() {
     take: 100,
   });
 
-  const allTransfers = await prisma.transfer.findMany({
-    where: { fromAccountId: account.id },
-    include: { dependent: true },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
-
   const entriesCents = allTransactions
     .filter((tx) => tx.amountCents > 0)
     .reduce((sum, tx) => sum + tx.amountCents, 0);
 
   const debitsCents = allTransactions
-    .filter((tx) => tx.amountCents < 0)
+    .filter((tx) => tx.amountCents < 0 && tx.type !== "TRANSFER_OUT")
     .reduce((sum, tx) => sum + Math.abs(tx.amountCents), 0);
 
   const activeDependents = account.dependents.filter((item) => item.isActive);
@@ -187,6 +182,32 @@ export default async function PainelPage() {
     };
   });
 
+  const weeklyChart = Array.from({ length: 14 }).map((_, index) => {
+    const date = new Date(now);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (13 - index));
+
+    const nextDate = new Date(date);
+    nextDate.setDate(nextDate.getDate() + 1);
+
+    const total = allTransactions
+      .filter(
+        (tx) =>
+          tx.occurredAt >= date &&
+          tx.occurredAt < nextDate &&
+          tx.amountCents < 0
+      )
+      .reduce((sum, tx) => sum + Math.abs(tx.amountCents), 0);
+
+    return {
+      label: new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+      }).format(date),
+      total,
+    };
+  });
+
   const recentTransactions = account.transactions.map((tx) => ({
     id: tx.id,
     description: tx.description,
@@ -209,13 +230,18 @@ export default async function PainelPage() {
 
   return (
     <PainelPremiumClient
-      balanceCents={account.balanceCents}
+      balanceCents={
+        account.buckets.find(
+          (bucket) => bucket.type === "PRIMARY" && bucket.dependentId === null
+        )?.balanceCents ?? account.balanceCents
+      }
       entriesCents={entriesCents}
       debitsCents={debitsCents}
       dependentsCount={activeDependents.length}
       totalSentToDependentsCents={totalSentToDependentsCents}
       familyRemainingLimitCents={familyRemainingLimitCents}
       monthlyChart={monthlyChart}
+      weeklyChart={weeklyChart}
       dependentUsage={dependentUsage}
       recentTransactions={recentTransactions}
       highestCategoryName={highestCategoryName}

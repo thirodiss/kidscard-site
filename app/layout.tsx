@@ -1,11 +1,5 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
 import AuthSessionProvider from "../components/providers/SessionProvider";
-
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata = {
   title: "KidsCard | Conta Digital para Pensão e Mesada",
@@ -20,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-br">
-      <body className={`${inter.className} min-h-screen bg-white text-black`}>
+      <body className="min-h-screen bg-white text-black">
         <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>

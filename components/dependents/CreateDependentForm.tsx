@@ -13,17 +13,6 @@ const initialState: ActionState = {
   message: "",
 };
 
-function SubmitButton() {
-  return (
-    <button
-      type="submit"
-      className="rounded-full bg-[#5b2cff] px-5 py-3 font-semibold text-white hover:opacity-90"
-    >
-      Salvar dependente
-    </button>
-  );
-}
-
 export default function CreateDependentForm() {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
@@ -38,11 +27,13 @@ export default function CreateDependentForm() {
 
   useEffect(() => {
     if (state.success) {
-      setName("");
-      setCpf("");
-      setBirthDate("");
-      setMonthlyLimit("");
-      setOpen(false);
+      queueMicrotask(() => {
+        setName("");
+        setCpf("");
+        setBirthDate("");
+        setMonthlyLimit("");
+        setOpen(false);
+      });
     }
   }, [state]);
 
