@@ -100,6 +100,18 @@ enum OnboardingStatus {
   REJECTED
 }
 
+enum PasswordTokenPurpose {
+  FIRST_ACCESS
+  PASSWORD_RESET
+}
+
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String
@@ -109,11 +121,18 @@ model User {
   role          UserRole @default(GUARDIAN)
   agency        String
   accountNumber String   @unique
+  mustChangePassword Boolean  @default(true)
+  passwordChangedAt DateTime?
+  lastLoginAt      DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  walletAccounts WalletAccount[]
-  dependents     Dependent[]     @relation("GuardianDependents")
+  walletAccounts        WalletAccount[]
+  dependents            Dependent[]             @relation("GuardianDependents")
+  onboardingApplication OnboardingApplication?  @relation("ApprovedApplicationUser")
+  reviewedApplications  OnboardingApplication[] @relation("ApplicationReviewer")
+  passwordTokens        PasswordResetToken[]
+  auditLogs             AuditLog[]               @relation("AuditActor")
 }
 
 model WalletAccount {
@@ -349,9 +368,63 @@ model OnboardingApplication {
   privacyConsentAt      DateTime
   termsConsentAt        DateTime
   guardianDeclarationAt DateTime
+  reviewedAt            DateTime?
+  reviewedById          String?
+  rejectionReason       String?
+  userId                String?          @unique
+  invitationSentAt      DateTime?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
+  reviewedBy User? @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  user       User? @relation("ApprovedApplicationUser", fields: [userId], references: [id], onDelete: SetNull)
+
   @@index([email, createdAt])
   @@index([status, createdAt])
+  @@index([reviewedById, reviewedAt])
+}
+
+model PasswordResetToken {
+  id        String               @id @default(cuid())
+  userId    String
+  tokenHash String               @unique
+  purpose   PasswordTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt, usedAt])
+}
+
+model EmailDelivery {
+  id             String              @id @default(cuid())
+  toEmail        String
+  template       String
+  status         EmailDeliveryStatus @default(PENDING)
+  providerId     String?
+  error          String?
+  idempotencyKey String              @unique
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([status, createdAt])
+  @@index([toEmail, createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  subjectType String
+  subjectId   String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId, createdAt])
+  @@index([subjectType, subjectId, createdAt])
 }

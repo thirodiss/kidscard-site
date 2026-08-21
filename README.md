@@ -35,6 +35,21 @@ As migrações são versionadas em `prisma/migrations` e aplicadas antes do buil
 
 Na Vercel, a aplicação prioriza `KIDSCARD_CORE_DATABASE_URL`, nome gerado pela conexão do banco `KIDSCARD_CORE`. `STORAGE_URL`, `KIDSCARD_CORE_URL` e `DATABASE_URL` permanecem como alternativas para outras instalações e desenvolvimento local.
 
+## Administração e acesso
+
+- O pré-cadastro entra em `/admin/cadastros` para análise manual.
+- Apenas usuários com papel `ADMIN` acessam as rotas administrativas.
+- A aprovação exige CPF válido, cria a conta e envia um link de primeiro acesso com validade de 48 horas.
+- A recuperação de senha usa link de uso único com validade de 30 minutos e resposta pública que não revela se o cadastro existe.
+- Senhas precisam ter de 12 a 128 caracteres, com letras e números; apenas hashes bcrypt ficam no banco.
+- Tokens de primeiro acesso e recuperação são armazenados somente como hash e invalidados após o uso.
+
+Para criar o primeiro administrador, defina temporariamente `ADMIN_SETUP_TOKEN` com no mínimo 32 caracteres, abra `/configurar-admin` e conclua o formulário. Depois do primeiro acesso, remova essa variável da Vercel.
+
+## E-mail transacional
+
+Defina `RESEND_API_KEY`, `EMAIL_FROM` e `APP_BASE_URL`. O remetente deve usar um domínio verificado no provedor de e-mail. Cada tentativa fica registrada em `EmailDelivery`, sem salvar a chave secreta nem o token de acesso.
+
 ## Núcleo de pagamentos
 
 - `lib/payments/contracts.ts`: contrato comum para qualquer emissor.

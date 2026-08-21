@@ -35,6 +35,8 @@ async function main() {
       name: "Thiago Demo",
       email: "demo@kidscard.com.br",
       role: "GUARDIAN",
+      mustChangePassword: false,
+      passwordChangedAt: new Date(),
     },
     create: {
       name: "Thiago Demo",
@@ -44,6 +46,8 @@ async function main() {
       agency: "0001",
       accountNumber: "123456",
       role: "GUARDIAN",
+      mustChangePassword: false,
+      passwordChangedAt: new Date(),
     },
   })
 
