@@ -4,10 +4,15 @@ import pg from "pg"
 const { Client } = pg
 const prismaCommand = process.platform === "win32" ? "prisma.cmd" : "prisma"
 const connectionString =
-  process.env.STORAGE_URL ?? process.env.KIDSCARD_CORE_URL ?? process.env.DATABASE_URL
+  process.env.KIDSCARD_CORE_DATABASE_URL ??
+  process.env.STORAGE_URL ??
+  process.env.KIDSCARD_CORE_URL ??
+  process.env.DATABASE_URL
 
 if (!connectionString) {
-  throw new Error("STORAGE_URL, KIDSCARD_CORE_URL ou DATABASE_URL não definida.")
+  throw new Error(
+    "KIDSCARD_CORE_DATABASE_URL, STORAGE_URL, KIDSCARD_CORE_URL ou DATABASE_URL não definida.",
+  )
 }
 
 process.env.DATABASE_URL = connectionString
