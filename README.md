@@ -28,10 +28,10 @@ O núcleo foi preparado para receber adaptadores de emissores sem acoplar a regr
 Em produção, o comando `vercel-build` executa automaticamente:
 
 ```bash
-prisma migrate deploy && prisma generate && next build
+node scripts/migrate-production.mjs && prisma generate && next build
 ```
 
-As migrações são versionadas em `prisma/migrations` e aplicadas antes do build de produção. Previews sem banco usam apenas uma URL local fictícia para compilar e nunca executam migrações ou acessam o banco real.
+As migrações são versionadas em `prisma/migrations` e aplicadas antes do build de produção. O script reconhece com segurança o schema legado da KidsCard antes de registrar o baseline das três migrações originais. Previews sem banco usam apenas uma URL local fictícia para compilar e nunca executam migrações ou acessam o banco real.
 
 ## Núcleo de pagamentos
 
