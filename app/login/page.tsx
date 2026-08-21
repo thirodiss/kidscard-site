@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
@@ -200,12 +201,18 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-xs leading-6 text-slate-500">
-                <p className="font-semibold text-slate-700">Acesso de demonstração</p>
-                <p>Agência: 0001</p>
-                <p>Conta: 123456</p>
-                <p>CPF: 12345678900</p>
-                <p>Senha: 123456</p>
+              <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-800">Ainda não possui conta?</p>
+                <p className="mt-1 leading-6">
+                  Faça seu pré-cadastro. O acesso será liberado somente após a análise
+                  e aprovação da solicitação.
+                </p>
+                <Link
+                  href="/cadastro"
+                  className="mt-3 inline-flex font-semibold text-blue-700 transition hover:text-blue-900"
+                >
+                  Fazer pré-cadastro
+                </Link>
               </div>
             </div>
           </section>
